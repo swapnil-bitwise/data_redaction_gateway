@@ -1,34 +1,20 @@
 """
-Enhanced metrics API router with detailed observability endpoints.
+FastAPI router for metrics tracking and aggregation endpoints.
 """
 import logging
-from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, HTTPException, Query, Depends, status
 from pydantic import BaseModel, Field
 
-from ...core.models.api import MetricsResponse
-from ...security import verify_api_key
-from ...observability import get_metrics_collector
+from ..observability.metrics_db import get_metrics_db, MetricsDatabase
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/metrics", tags=["Monitoring"])
-
-# Global metrics instance (shared singleton)
-_metrics = get_metrics_collector()
-
-# Import database metrics functions
-try:
-    from ...observability.metrics_db import get_metrics_db, MetricsDatabase
-    DB_METRICS_ENABLED = True
-    logger.info("Database metrics tracking enabled")
-except ImportError:
-    DB_METRICS_ENABLED = False
-    logger.warning("Database metrics not available - install SQLAlchemy to enable")
+router = APIRouter(prefix="/metrics", tags=["Metrics & Analytics"])
 
 
-# Pydantic models for database metrics
+# Pydantic models for request/response
 class MetricLogRequest(BaseModel):
     """Request model for logging a metric."""
     endpoint: Optional[str] = Field(None, description="API endpoint path")
@@ -100,188 +86,22 @@ class RedactionQualitySummary(BaseModel):
     over_redacted_percentage: float
 
 
-@router.get("/", response_model=MetricsResponse)
-async def get_metrics(api_key: str = Depends(verify_api_key)):
-    """Get basic service metrics (backward compatible)."""
-    return MetricsResponse(
-        total_requests=_metrics.total_requests,
-        total_redactions=_metrics.total_redactions,
-        avg_processing_time_ms=_metrics.get_average_latency(),
-        p95_latency_ms=_metrics.get_percentile_latency(95),
-        p99_latency_ms=_metrics.get_percentile_latency(99),
-        cache_hit_rate=_metrics.get_cache_hit_rate(),
-        redaction_coverage=_metrics.get_redaction_coverage(),
-        judge_fallback_rate=_metrics.judge_fallback_rate,
-        judge_calls_total=_metrics.judge_calls,
-        judge_fallbacks=_metrics.judge_fallbacks
-    )
+def get_db() -> MetricsDatabase:
+    """Dependency to get metrics database instance."""
+    return get_metrics_db()
 
 
-@router.get("/detailed")
-async def get_detailed_metrics(api_key: str = Depends(verify_api_key)) -> Dict[str, Any]:
-    """
-    Get comprehensive metrics with full observability data.
-    
-    Includes endpoint breakdowns, rule statistics, error analysis, and alerts.
-    """
-    return _metrics.get_summary()
-
-
-@router.get("/endpoints")
-async def get_endpoint_metrics(
-    api_key: str = Depends(verify_api_key),
-    sort_by: Optional[str] = Query("requests", description="Sort by: requests, errors, latency")
-) -> Dict[str, Any]:
-    """
-    Get per-endpoint performance metrics.
-    
-    Shows request counts, error rates, and latency statistics for each endpoint.
-    """
-    summary = _metrics.get_summary()
-    endpoint_stats = summary.get('endpoint_stats', {})
-    
-    # Sort endpoints
-    if sort_by == "errors":
-        sorted_stats = dict(sorted(
-            endpoint_stats.items(),
-            key=lambda x: x[1].get('errors', 0),
-            reverse=True
-        ))
-    elif sort_by == "latency":
-        sorted_stats = dict(sorted(
-            endpoint_stats.items(),
-            key=lambda x: x[1].get('avg_latency_ms', 0),
-            reverse=True
-        ))
-    else:  # sort by requests
-        sorted_stats = dict(sorted(
-            endpoint_stats.items(),
-            key=lambda x: x[1].get('requests', 0),
-            reverse=True
-        ))
-    
-    return {
-        'total_endpoints': len(sorted_stats),
-        'sort_by': sort_by,
-        'endpoints': sorted_stats
-    }
-
-
-@router.get("/rules")
-async def get_rule_metrics(
-    api_key: str = Depends(verify_api_key),
-    min_triggers: Optional[int] = Query(0, description="Minimum trigger count")
-) -> Dict[str, Any]:
-    """
-    Get redaction rule trigger statistics.
-    
-    Shows which rules are being triggered most frequently and what actions are taken.
-    """
-    summary = _metrics.get_summary()
-    rule_stats = summary.get('rule_stats', {})
-    
-    # Filter by minimum triggers
-    if min_triggers > 0:
-        rule_stats = {
-            rule_id: stats
-            for rule_id, stats in rule_stats.items()
-            if stats['total_triggers'] >= min_triggers
-        }
-    
-    return {
-        'total_rules': len(rule_stats),
-        'min_triggers_filter': min_triggers,
-        'rules': rule_stats
-    }
-
-
-@router.get("/alerts")
-async def get_recent_alerts(
-    api_key: str = Depends(verify_api_key),
-    limit: Optional[int] = Query(10, description="Number of recent alerts to return")
-) -> Dict[str, Any]:
-    """
-    Get recent system alerts.
-    
-    Returns alerts triggered by threshold violations (high latency, error rates, etc.).
-    """
-    summary = _metrics.get_summary()
-    all_alerts = summary.get('recent_alerts', [])
-    
-    return {
-        'total_alerts': len(all_alerts),
-        'recent_alerts': all_alerts[-limit:] if all_alerts else []
-    }
-
-
-@router.get("/performance")
-async def get_performance_metrics(api_key: str = Depends(verify_api_key)) -> Dict[str, Any]:
-    """
-    Get real-time performance metrics.
-    
-    Includes throughput, latency percentiles, and error rates.
-    """
-    summary = _metrics.get_summary()
-    
-    return {
-        'throughput': {
-            'requests_per_second': summary.get('requests_per_second', 0),
-            'total_requests': summary.get('total_requests', 0)
-        },
-        'latency': {
-            'avg_ms': summary.get('avg_processing_time_ms', 0),
-            'min_ms': summary.get('min_latency_ms', 0),
-            'max_ms': summary.get('max_latency_ms', 0),
-            'p50_ms': summary.get('p50_latency_ms', 0),
-            'p95_ms': summary.get('p95_latency_ms', 0),
-            'p99_ms': summary.get('p99_latency_ms', 0)
-        },
-        'reliability': {
-            'error_rate': summary.get('error_rate', 0),
-            'total_errors': summary.get('total_errors', 0),
-            'health_status': summary.get('health_status', 'unknown')
-        }
-    }
-
-
-@router.post("/reset")
-async def reset_metrics(api_key: str = Depends(verify_api_key)) -> Dict[str, str]:
-    """
-    Reset all metrics counters.
-    
-    WARNING: This will clear all collected metrics data.
-    """
-    _metrics.reset()
-    logger.warning(f"Metrics reset by API key: {api_key[:8]}...")
-    
-    return {
-        'status': 'success',
-        'message': 'All metrics have been reset'
-    }
-
-
-# ========================================
-# Database-backed Metrics Endpoints
-# ========================================
-
-@router.post("/db/log", response_model=MetricLogResponse, status_code=status.HTTP_201_CREATED)
-async def log_metric_to_db(
+@router.post("/log", response_model=MetricLogResponse, status_code=status.HTTP_201_CREATED)
+async def log_metric(
     metric_data: MetricLogRequest,
-    api_key: str = Depends(verify_api_key)
+    db: MetricsDatabase = Depends(get_db)
 ):
     """
     Log a single request metric to the database.
     
-    This endpoint persists metrics for long-term storage and analysis.
+    This endpoint is called by the gateway to persist metrics for each request.
     """
-    if not DB_METRICS_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database metrics not enabled. Install SQLAlchemy to use this feature."
-        )
-    
     try:
-        db = get_metrics_db()
         metric_id = db.log_request(
             endpoint=metric_data.endpoint,
             method=metric_data.method,
@@ -314,33 +134,28 @@ async def log_metric_to_db(
                 message="Failed to log metric"
             )
     except Exception as e:
-        logger.error(f"Error logging metric to database: {e}")
+        logger.error(f"Error logging metric: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to log metric: {str(e)}"
         )
 
 
-@router.get("/db/aggregated", response_model=AggregatedMetricsResponse)
-async def get_aggregated_db_metrics(
+@router.get("/aggregated", response_model=AggregatedMetricsResponse)
+async def get_aggregated_metrics(
     start_time: Optional[datetime] = Query(None, description="Start time for metrics"),
     end_time: Optional[datetime] = Query(None, description="End time for metrics"),
-    period: str = Query("hour", description="Aggregation period (minute/hour/day)")
+    period: str = Query("hour", description="Aggregation period (minute/hour/day)"),
+    db: MetricsDatabase = Depends(get_db)
 ):
     """
-    Get aggregated metrics from database for a time range.
+    Get aggregated metrics for a time range.
     
     Query Parameters:
     - start_time: Start of time range (defaults to 1 hour ago)
     - end_time: End of time range (defaults to now)
     - period: Aggregation granularity (minute/hour/day)
     """
-    if not DB_METRICS_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database metrics not enabled"
-        )
-    
     try:
         # Default time range: last hour
         if end_time is None:
@@ -355,7 +170,6 @@ async def get_aggregated_db_metrics(
                 detail="Invalid period. Must be 'minute', 'hour', or 'day'"
             )
         
-        db = get_metrics_db()
         metrics = db.get_aggregated_metrics(start_time, end_time, period)
         
         if not metrics:
@@ -411,26 +225,21 @@ async def get_aggregated_db_metrics(
         )
 
 
-@router.get("/db/timeseries", response_model=List[TimeSeriesDataPoint])
-async def get_time_series_db_metrics(
+@router.get("/timeseries", response_model=List[TimeSeriesDataPoint])
+async def get_time_series_metrics(
     start_time: Optional[datetime] = Query(None, description="Start time"),
     end_time: Optional[datetime] = Query(None, description="End time"),
-    interval_minutes: int = Query(5, ge=1, le=1440, description="Time interval in minutes")
+    interval_minutes: int = Query(5, ge=1, le=1440, description="Time interval in minutes"),
+    db: MetricsDatabase = Depends(get_db)
 ):
     """
-    Get time-series metrics from database for visualization.
+    Get time-series metrics for visualization.
     
     Query Parameters:
     - start_time: Start of time range (defaults to 1 hour ago)
     - end_time: End of time range (defaults to now)
     - interval_minutes: Time interval for grouping (1-1440 minutes)
     """
-    if not DB_METRICS_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database metrics not enabled"
-        )
-    
     try:
         # Default time range: last hour
         if end_time is None:
@@ -438,7 +247,6 @@ async def get_time_series_db_metrics(
         if start_time is None:
             start_time = end_time - timedelta(hours=1)
         
-        db = get_metrics_db()
         time_series = db.get_time_series_metrics(start_time, end_time, interval_minutes)
         
         return [TimeSeriesDataPoint(**point) for point in time_series]
@@ -450,24 +258,19 @@ async def get_time_series_db_metrics(
         )
 
 
-@router.get("/db/redaction-quality", response_model=RedactionQualitySummary)
-async def get_redaction_quality_db_summary(
+@router.get("/redaction-quality", response_model=RedactionQualitySummary)
+async def get_redaction_quality_summary(
     start_time: Optional[datetime] = Query(None, description="Start time"),
-    end_time: Optional[datetime] = Query(None, description="End time")
+    end_time: Optional[datetime] = Query(None, description="End time"),
+    db: MetricsDatabase = Depends(get_db)
 ):
     """
-    Get summary of redaction quality from LLM judge evaluations stored in database.
+    Get summary of redaction quality from LLM judge evaluations.
     
     Query Parameters:
     - start_time: Start of time range (defaults to 24 hours ago)
     - end_time: End of time range (defaults to now)
     """
-    if not DB_METRICS_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database metrics not enabled"
-        )
-    
     try:
         # Default time range: last 24 hours
         if end_time is None:
@@ -475,7 +278,6 @@ async def get_redaction_quality_db_summary(
         if start_time is None:
             start_time = end_time - timedelta(hours=24)
         
-        db = get_metrics_db()
         quality_data = db.get_redaction_quality_summary(start_time, end_time)
         
         total = quality_data['total_evaluated']
@@ -497,22 +299,14 @@ async def get_redaction_quality_db_summary(
         )
 
 
-@router.get("/db/health")
-async def metrics_db_health_check():
-    """Health check for metrics database system."""
-    if not DB_METRICS_ENABLED:
-        return {
-            "status": "disabled",
-            "database": "not_installed",
-            "message": "Database metrics not enabled. Install SQLAlchemy to use this feature."
-        }
-    
+@router.get("/health")
+async def metrics_health_check():
+    """Health check for metrics system."""
     try:
         db = get_metrics_db()
         # Try a simple query to verify database is accessible
-        from sqlalchemy import text
         with db.get_session() as session:
-            session.execute(text("SELECT 1"))
+            session.execute("SELECT 1")
         
         return {
             "status": "healthy",
@@ -520,12 +314,9 @@ async def metrics_db_health_check():
             "db_path": db.db_path
         }
     except Exception as e:
-        logger.error(f"Metrics database health check failed: {e}")
+        logger.error(f"Metrics health check failed: {e}")
         return {
             "status": "unhealthy",
             "database": "error",
             "error": str(e)
         }
-
-
-__all__ = ["router", "_metrics"]

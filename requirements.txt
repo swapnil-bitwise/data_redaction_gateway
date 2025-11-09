@@ -38,6 +38,14 @@ prometheus-client>=0.18.0
 # Caching
 cachetools>=5.3.0
 
+# Database for Metrics
+sqlalchemy>=2.0.0
+
+# Dashboard and Visualization
+streamlit>=1.28.0
+pandas>=2.0.0
+plotly>=5.17.0
+
 # CLI Tools
 click>=8.1.0
 rich>=13.6.0

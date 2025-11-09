@@ -174,11 +174,21 @@ Our solution implements a **high-performance FastAPI-based gateway** with a modu
 cd data_redaction_gateway
 ```
 
+#### 2. Automated Setup (Recommended - Windows)
+```powershell
+# Run automated setup script
+.\quickstart.ps1
+```
 
+This script will:
+- Create Python virtual environment
+- Install all dependencies from `requirements.txt`
+- Download spaCy NER model (`en_core_web_sm`)
+- Verify installation
 
-#### 2. Manual Setup (All Platforms)
+#### 3. Manual Setup (All Platforms)
 
-**Step 2a: Create Virtual Environment**
+**Step 3a: Create Virtual Environment**
 ```powershell
 # Windows PowerShell
 python -m venv venv
@@ -189,17 +199,17 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-**Step 2b: Install Dependencies**
+**Step 3b: Install Dependencies**
 ```powershell
 pip install -r requirements.txt
 ```
 
-**Step 2c: Download spaCy NER Model**
+**Step 3c: Download spaCy NER Model**
 ```powershell
 python -m spacy download en_core_web_sm
 ```
 
-#### 3. Environment Configuration
+#### 4. Environment Configuration
 
 **Create `.env` file** (copy from `.env.example`):
 ```powershell
@@ -602,369 +612,6 @@ For detailed information, see:
 ---
 
 ## 📄 License
-
-MIT License - See LICENSE file for details
-
----
-
-## 🙏 Acknowledgments
-
-- **OpenAI** - GPT-4o-mini for LLM-as-Judge validation
-- **spaCy** - NER model for person name detection
-- **FastAPI** - High-performance web framework
-- **Streamlit** - Interactive dashboard framework
-
-   - Problem statement details
-
-# Check service health   - Sample input data
-
-python -m src.cli health   - Sample output data
-
-   - Redaction rules configuration
-
-# View metrics
-
-python -m src.cli metrics### Phase 2: Data Stream Simulator
-
-Once sample source files are provided:
-
-# Validate policy configuration```bash
-
-python -m src.cli validatepython utils/data_stream_simulator.py --source input/sample_input_data.json --interval 1
-
-``````
-
-
-
----### Phase 3: Core Implementation
-
-```bash
-
-## 🔒 Detection Methods# Run the redaction gateway
-
-python src/main.py --config config/config.yaml
-
-### 1. Regex Patterns
-
-- ✅ Email addresses# Run with streaming simulation
-
-- ✅ Phone numbers (multiple formats)python src/main.py --config config/config.yaml --simulate-stream
-
-- ✅ IBAN (International Bank Account Numbers)```
-
-- ✅ Account numbers
-
-- ✅ SSN (Social Security Numbers)### Phase 4: Testing
-
-```bash
-
-### 2. Luhn Algorithm# Run all tests
-
-- ✅ Credit card validation (13-19 digits)pytest tests/
-
-- ✅ Checksum verification
-
-- ✅ Format-aware processing# Run with coverage
-
-pytest tests/ --cov=src --cov-report=html
-
-### 3. Named Entity Recognition (NER)```
-
-- ✅ Person names using spaCy
-
-- ✅ Context-aware detection## Usage Examples
-
-- ✅ Multiple language support (extensible)
-
-### Example 1: Process JSON Stream
-
----```python
-
-from src.redaction_engine import RedactionEngine
-
-## 🎭 Redaction Strategiesfrom src.stream_processor import StreamProcessor
-
-
-
-| Method | Description | Use Case |# Initialize engine with rules
-
-|--------|-------------|----------|engine = RedactionEngine('input/redaction_rules.yaml')
-
-| **Mask** | Replace with `***`, show last 4 | Default for display |
-
-| **Tokenize** | HMAC-based deterministic token | Joinable analytics |# Process data
-
-| **Hash** | One-way SHA-256 hash | Irreversible anonymization |processor = StreamProcessor(engine)
-
-| **Encrypt** | Format-preserving encryption | Reversible with key |processor.process_stream('input/sample_input_data.json')
-
-```
-
----
-
-### Example 2: Simulate Real-Time Stream
-
-## ⚙️ Configuration```python
-
-from utils.data_stream_simulator import DataStreamSimulator
-
-### Redaction Rules (`input/redaction_rules.yaml`)
-
-# Simulate streaming from static file
-
-```yamlsimulator = DataStreamSimulator(
-
-version: "1.3"    source_files=['input/source1.json', 'input/source2.json', 'input/source3.txt'],
-
-effective_date: "2025-10-20"    interval=0.5  # 500ms between records
-
-rules:)
-
-  - id: EMAIL_REGEXsimulator.start()
-
-    pattern: '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'```
-
-    action: mask
-
-    severity: medium## Development Guidelines
-
-    tags: [GDPR, PRIVACY]
-
-    enabled: true### Code Standards
-
-    - Follow PEP 8 style guide
-
-  - id: LUHN_PAN- Use type hints for function signatures
-
-    pattern: '(?:\d[ -]*?){13,19}'- Document all public APIs with docstrings
-
-    action: mask- Maintain test coverage above 80%
-
-    severity: high
-
-    tags: [PCI_DSS_4_0]### Git Workflow
-
-    enabled: true- Create feature branches for new functionality
-
-```- Write descriptive commit messages
-
-- Update conversation.log with significant changes
-
-### Environment Variables (`.env`)
-
-## Performance Considerations
-
-```env- Stream processing to handle large datasets
-
-# API Keys- Efficient regex compilation and caching
-
-API_KEYS=dev-api-key-12345,prod-key-xyz- Asynchronous I/O for non-blocking operations
-
-- Configurable batch sizes for throughput optimization
-
-# Security
-
-HMAC_SECRET_KEY=your-secure-key-here## Security Notes
-
-TLS_ENABLED=false- Rules are loaded from trusted YAML files only
-
-- No sensitive data is logged
-
-# Performance- Audit trail maintains metadata only
-
-CACHE_TTL=300- Output files have restricted permissions
-
-CACHE_SIZE=1000
-
-```## Future Enhancements
-
-- [ ] Support for Apache Kafka integration
-
----- [ ] Real-time dashboard for monitoring
-
-- [ ] ML-based PII detection
-
-## 📊 API Endpoints- [ ] REST API for rule management
-
-- [ ] Distributed processing support
-
-| Endpoint | Method | Description |- [ ] Cloud deployment configurations
-
-|----------|--------|-------------|
-
-| `/redact` | POST | Main redaction endpoint |## Contributing
-
-| `/redact/dry-run` | POST | Preview redactions |This is a hackathon project. Development conversation is tracked in `conversation.log`.
-
-| `/redact/batch` | POST | Batch processing |
-
-| `/health` | GET | Health check |## License
-
-| `/metrics` | GET | Performance metrics |TBD
-
-| `/policy/version` | GET | Policy information |
-
-| `/policy/reload` | POST | Reload policy |## Contact
-
-| `/policy/validate` | GET | Validate configuration |Project developed for hackathon challenge: Runtime PII/PCI Data Redaction Gateway
-
-
-
-------
-
-**Status**: Initial Setup Complete - Awaiting Input Files
-
-## 📈 Performance**Last Updated**: November 8, 2025
-
-
-- **Latency**: <100ms typical processing time
-- **Throughput**: Tested up to 50 RPS
-- **Memory**: Efficient with TTL-based caching
-- **Scalability**: Stateless design, horizontally scalable
-
-### Metrics Available
-- Total requests & redactions
-- Average/P95/P99 latency
-- Cache hit rate
-- Redaction coverage
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│  FastAPI Gateway                    │
-│  • API Key Authentication           │
-│  • Request Validation               │
-│  • Response Headers                 │
-└──────┬──────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│  Redaction Engine                   │
-│  • Pattern Matching (Regex)         │
-│  • Luhn Validation                  │
-│  • NER Processing (spaCy)           │
-│  • Action Application               │
-└──────┬──────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│  Policy Loader                      │
-│  • YAML Configuration               │
-│  • Rule Caching (TTL)               │
-│  • Version Management               │
-└─────────────────────────────────────┘
-```
-
----
-
-## 📁 Project Structure
-
-```
-data_redaction_gateway/
-├── src/
-│   ├── main.py              # FastAPI application
-│   ├── models.py            # Pydantic models
-│   ├── redaction_engine.py  # Core redaction logic
-│   ├── policy_loader.py     # YAML policy loader
-│   ├── security.py          # Auth & sanitization
-│   ├── metrics.py           # Metrics collection
-│   └── cli.py               # CLI interface
-├── utils/
-│   └── data_stream_simulator.py  # Test data generator
-├── input/
-│   ├── redaction_rules.yaml      # Policy configuration
-│   ├── test_order.json           # Sample order data
-│   ├── test_transaction.json     # Sample transaction
-│   └── test_chat.json            # Sample chat messages
-├── tests/
-│   └── test_redaction.py    # Unit tests
-├── config/
-│   └── config.yaml          # App configuration
-├── requirements.txt         # Dependencies
-├── .env.sample             # Environment template
-├── quickstart.ps1          # Setup automation
-├── USAGE_GUIDE.md          # Detailed usage guide
-├── IMPLEMENTATION_SUMMARY.md  # Project summary
-├── TROUBLESHOOTING.md      # Help guide
-└── conversation.log        # Development log
-```
-
----
-
-## 🔒 Security & Compliance
-
-### GDPR Compliance
-✅ Data minimization through redaction  
-✅ Right to be forgotten (no data storage)  
-✅ Purpose limitation (policy-driven)  
-✅ Audit trail with metadata  
-
-### PCI DSS 4.0
-✅ Cardholder data protection  
-✅ Secure key management  
-✅ Access control (API keys)  
-✅ No PII in logs  
-
----
-
-## 📚 Documentation
-
-- **[APPLICATION_RUN_GUIDE.md](APPLICATION_RUN_GUIDE.md)** - Comprehensive setup and usage guide
-- **[METRICS_SYSTEM_GUIDE.md](METRICS_SYSTEM_GUIDE.md)** - Metrics dashboard documentation (2000+ lines)
-- **[DEPLOYMENT_READINESS_REPORT.md](DEPLOYMENT_READINESS_REPORT.md)** - Test results and production readiness
-- **[PRE_DEPLOYMENT_TEST_PLAN.md](PRE_DEPLOYMENT_TEST_PLAN.md)** - 3-hour structured test plan
-- **[SECURITY_IMPLEMENTATION_STATUS.md](SECURITY_IMPLEMENTATION_STATUS.md)** - Security features
-- **[DOCUMENTATION_GUIDE.md](DOCUMENTATION_GUIDE.md)** - Navigation guide for all docs
-- **[docs/](docs/)** - Detailed technical documentation
-  - API guides, configuration, LLM Judge, security, troubleshooting
-
----
-
-## 🏆 Key Achievements
-
-✅ **All 7 Core Requirements Implemented:**
-1. ✅ Multi-method sensitive data detection (Regex, Luhn, NER)
-2. ✅ Shape-preserving redaction with multiple methods
-3. ✅ LLM-as-Judge validation with GPT-4o-mini (15% sampling)
-4. ✅ Policy-as-code with YAML configuration
-5. ✅ Warm decision cache with TTL
-6. ✅ Security baseline (TLS, API keys, log sanitization)
-7. ✅ Comprehensive observability (metrics, dashboard, tracing-ready)
-
-✅ **Advanced Features:**
-- Real-time metrics tracking with SQLite database
-- Interactive Streamlit dashboard with Plotly visualizations
-- JWT authentication and RBAC support
-- Audit logging for compliance
-- Rate limiting (60 req/min default)
-- Format-Preserving Encryption (FPE) for PANs
-- WebSocket support for real-time streaming
-
-✅ **Production Ready:**
-- 90% test pass rate (18/20 checks)
-- Comprehensive test suite (100+ test cases)
-- Detailed documentation (50+ pages)
-- Deployment readiness report with evidence
-
----
-
-## 🤝 Team & Contribution
-
-**Developed for:** [Hackathon Name]  
-**Team:** [Your Team Name]  
-**Contact:** [Your Email/Contact]
-
----
-
-## � License
 
 MIT License - See LICENSE file for details
 

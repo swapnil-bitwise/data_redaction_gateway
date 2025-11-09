@@ -24,6 +24,14 @@ router = APIRouter(prefix="/redact", tags=["Redaction"])
 from ...observability.metrics import get_metrics_collector
 _metrics = get_metrics_collector()
 
+# Import database metrics for detailed logging
+try:
+    from ...observability.metrics_db import get_metrics_db
+    DB_METRICS_ENABLED = True
+except ImportError:
+    DB_METRICS_ENABLED = False
+    logger.warning("Database metrics not available")
+
 
 
 @router.post("/", response_model=RedactionResponse)
@@ -115,10 +123,81 @@ async def redact_data(
             judge_result=judge_result
         )
         
+        # Log detailed metrics to database
+        if DB_METRICS_ENABLED:
+            try:
+                db = get_metrics_db()
+                
+                # Extract rules triggered
+                rules_triggered = list(set([meta.rule for meta in redaction_meta])) if redaction_meta else []
+                
+                # Determine redaction quality from judge result
+                redaction_quality = None
+                confidence_score = None
+                llm_response_time = None
+                
+                if judge_result:
+                    confidence_score = judge_result.confidence / 100.0  # Convert to 0-1 scale
+                    
+                    # Determine quality based on coverage and confidence
+                    if judge_result.coverage_complete and judge_result.confidence >= 80:
+                        redaction_quality = "good"
+                    elif not judge_result.coverage_complete:
+                        redaction_quality = "under_redacted"
+                    elif len(redaction_meta) > 0 and judge_result.confidence < 60:
+                        redaction_quality = "over_redacted"
+                    else:
+                        redaction_quality = "good"
+                    
+                    # Estimate LLM response time (if we tracked it in judge)
+                    llm_response_time = processing_time * 0.7 if judge_result else None
+                
+                # Log to database
+                db.log_request(
+                    endpoint="/api/v1/redact",
+                    method="POST",
+                    success=True,
+                    status_code=200,
+                    latency_ms=processing_time,
+                    processing_time_ms=processing_time,
+                    redaction_count=len(redaction_meta) if redaction_meta else 0,
+                    rules_triggered=rules_triggered,
+                    llm_judge_called=judge_result is not None,
+                    llm_response_time_ms=llm_response_time,
+                    redaction_quality=redaction_quality,
+                    confidence_score=confidence_score,
+                    data_size_bytes=len(json.dumps(request.data).encode('utf-8')),
+                    cache_hit=False,
+                    request_id=fastapi_request.headers.get("X-Request-ID", None)
+                )
+            except Exception as db_error:
+                # Don't fail the request if metrics logging fails
+                logger.debug(f"Failed to log detailed metrics: {db_error}")
+        
         return response
         
     except Exception as e:
         logger.error(f"Redaction error: {sanitize_log(str(e))}")
+        
+        # Log failed request to database
+        if DB_METRICS_ENABLED:
+            try:
+                db = get_metrics_db()
+                processing_time = (time.time() - start_time) * 1000
+                db.log_request(
+                    endpoint="/api/v1/redact",
+                    method="POST",
+                    success=False,
+                    status_code=500,
+                    error_message=str(e)[:200],  # Truncate long error messages
+                    latency_ms=processing_time,
+                    processing_time_ms=processing_time,
+                    redaction_count=0,
+                    request_id=fastapi_request.headers.get("X-Request-ID", None)
+                )
+            except Exception as db_error:
+                logger.debug(f"Failed to log error metrics: {db_error}")
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Redaction processing failed"
