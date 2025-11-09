@@ -1,0 +1,503 @@
+PS C:\Users\swapnilj1\Documents\hackathon\data_redaction_gateway> python -m pytest test_suite/ -v -s
+C:\Users\swapnilj1\AppData\Roaming\Python\Python311\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+========================== test session starts ===========================
+platform win32 -- Python 3.11.0, pytest-8.3.3, pluggy-1.6.0 -- C:\Program Files\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\swapnilj1\Documents\hackathon\data_redaction_gateway     
+plugins: anyio-4.11.0, asyncio-0.24.0
+asyncio: mode=Mode.STRICT, default_loop_scope=None
+collected 19 items                                                        
+
+test_suite/test_api_endpoints.py::TestHealthEndpoints::test_root_endpoint  
+=== Root Endpoint ===
+Response: {
+  "service": "PII/PCI Data Redaction Gateway",
+  "version": "1.0.0",
+  "environment": "development",
+  "status": "operational"
+}
+FAILED
+test_suite/test_api_endpoints.py::TestHealthEndpoints::test_health_check   
+=== Health Check ===
+Status: healthy
+Version: 1.0.0
+Policy Version: 1.4
+Uptime: 5500.54s
+Cache Size: 0
+PASSED
+test_suite/test_api_endpoints.py::TestMetricsEndpoint::test_get_metrics FAILED
+test_suite/test_api_endpoints.py::TestMetricsEndpoint::test_metrics_requires_auth FAILED
+test_suite/test_api_endpoints.py::TestRedactionEndpoint::test_redact_chat_data 
+=== Redact Chat Data ===
+Original Data: [
+  {
+    "chat_id": "C12345",
+    "timestamp": "2025-11-08T09:15:00",
+    "message": "Hi, this is Alice Johnson, my card 4111111111111111 was declined today."
+  },
+  {
+    "chat_id": "C12346",
+    "timestamp": "2025-11-08T09:20:00",
+    "message": "My phone number is 555-987-6543, please contact me about the refund."
+  },
+  {
+    "chat_id": "C12347",
+    "timestamp": "2025-11-08T09:25:00",
+    "message": "Hello, my email is support@customer.com and I can't log into my account."
+  },
+  {
+    "chat_id": "C72875",
+    "timestamp": "2025-10-28T06:45:07.277933",
+    "message": "My phone number is 075.485.8002x1779, please contact me about the refund."
+  }
+]
+
+Redacted Data: [
+  {
+    "chat_id": "C12345",
+    "timestamp": "2025-11-08T09:15:00",
+    "message": "Hi, this is Alice Johnson, my card ************1111 was declined today."
+  },
+  {
+    "chat_id": "C12346",
+    "timestamp": "2025-11-08T09:20:00",
+    "message": "My phone number is ******6543, please contact me about the refund."
+  },
+  {
+    "chat_id": "C12347",
+    "timestamp": "2025-11-08T09:25:00",
+    "message": "Hello, my email is s*****t@c******r.com and I can't log into my account."
+  },
+  {
+    "chat_id": "C72875",
+    "timestamp": "2025-10-28T06:45:07.277933",
+    "message": "My phone number is ***********1779, please contact me about the refund."
+  }
+]
+
+Processing Time: 6.04ms
+Policy Version: 1.4
+
+Redactions Applied: 4
+  - message: LUHN_PAN -> mask
+  - message: PHONE_REGEX -> mask
+  - message: EMAIL_REGEX -> mask
+  - message: PHONE_REGEX -> mask
+PASSED
+test_suite/test_api_endpoints.py::TestRedactionEndpoint::test_redact_transaction_data
+=== Redact Transaction Data ===
+Original Data: {
+  "txn_id": "TXN-9876543",
+  "account_no": "1234567890",
+  "iban": "GB82WEST12345698765432",
+  "pan": "5425233430109903",
+  "amount": 1500.0,
+  "currency": "USD",
+  "merchant": "Tech Store Inc",
+  "customer_name": "Jane Doe",
+  "timestamp": "2025-11-08T14:45:00"
+}
+
+Redacted Data: {
+  "txn_id": "TXN-9876543",
+  "account_no": "******7890",
+  "iban": "GB82WEST*********65432",
+  "pan": "************9903",
+  "amount": 1500.0,
+  "currency": "USD",
+  "merchant": "Tech Store Inc",
+  "customer_name": "Jane Doe",
+  "timestamp": "2025-11-08T14:45:00"
+}
+
+Processing Time: 4.01ms
+
+Redactions Applied: 3
+  - account_no: PHONE_REGEX -> mask
+  - iban: PHONE_REGEX -> mask
+  - pan: LUHN_PAN -> mask
+PASSED
+test_suite/test_api_endpoints.py::TestRedactionEndpoint::test_redact_order_data
+=== Redact Order Data ===
+Original Data: {
+  "order_id": "ORD-123456",
+  "customer": {
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "phone": "555-123-4567",
+    "billing_address": "123 Main St, New York, NY 10001",
+    "credit_card": "4532015112830366",
+    "expiry": "12/25",
+    "cvv": "123"
+  },
+  "order_date": "2025-11-08T10:30:00",
+  "amount": 299.99,
+  "currency": "USD",
+  "notes": "Please deliver ASAP"
+}
+
+Redacted Data: {
+  "order_id": "ORD-123456",
+  "customer": {
+    "name": "John Smith",
+    "email": "j********h@e*****e.com",
+    "phone": "******4567",
+    "billing_address": "123 Main St, New York, NY 10001",
+    "credit_card": "************0366",
+    "expiry": "12/25",
+    "cvv": "123"
+  },
+  "order_date": "2025-11-08T10:30:00",
+  "amount": 299.99,
+  "currency": "USD",
+  "notes": "Please deliver ASAP"
+}
+
+Processing Time: 4.01ms
+
+Redactions Applied: 3
+  - email: EMAIL_REGEX -> mask
+  - phone: PHONE_REGEX -> mask
+  - credit_card: LUHN_PAN -> mask
+PASSED
+test_suite/test_api_endpoints.py::TestRedactionEndpoint::test_redact_without_metadata
+=== Redact Without Metadata ===
+Redacted Data: [
+  {
+    "chat_id": "C12345",
+    "timestamp": "2025-11-08T09:15:00",
+    "message": "Hi, this is Alice Johnson, my card ************1111 was declined today."
+  },
+  {
+    "chat_id": "C12346",
+    "timestamp": "2025-11-08T09:20:00",
+    "message": "My phone number is ******6543, please contact me about the refund."
+  },
+  {
+    "chat_id": "C12347",
+    "timestamp": "2025-11-08T09:25:00",
+    "message": "Hello, my email is s*****t@c******r.com and I can't log into my account."
+  },
+  {
+    "chat_id": "C72875",
+    "timestamp": "2025-10-28T06:45:07.277933",
+    "message": "My phone number is ***********1779, please contact me about the refund."
+  }
+]
+Metadata Included: False
+PASSED
+test_suite/test_api_endpoints.py::TestRedactionEndpoint::test_redact_requires_auth FAILED
+test_suite/test_api_endpoints.py::TestDryRunEndpoint::test_dry_run_redaction
+=== Dry Run Redaction ===
+Original Data: [
+  {
+    "chat_id": "C12345",
+    "timestamp": "2025-11-08T09:15:00",
+    "message": "Hi, this is Alice Johnson, my card 4111111111111111 was declined today."
+  },
+  {
+    "chat_id": "C12346",
+    "timestamp": "2025-11-08T09:20:00",
+    "message": "My phone number is 555-987-6543, please contact me about the refund."
+  },
+  {
+    "chat_id": "C12347",
+    "timestamp": "2025-11-08T09:25:00",
+    "message": "Hello, my email is support@customer.com and I can't log into my account."
+  },
+  {
+    "chat_id": "C72875",
+    "timestamp": "2025-10-28T06:45:07.277933",
+    "message": "My phone number is 075.485.8002x1779, please contact me about the refund."
+  }
+]
+
+Redacted Data: [
+  {
+    "chat_id": "C12345",
+    "timestamp": "2025-11-08T09:15:00",
+    "message": "Hi, this is Alice Johnson, my card ************1111 was declined today."
+  },
+  {
+    "chat_id": "C12346",
+    "timestamp": "2025-11-08T09:20:00",
+    "message": "My phone number is ******6543, please contact me about the refund."
+  },
+  {
+    "chat_id": "C12347",
+    "timestamp": "2025-11-08T09:25:00",
+    "message": "Hello, my email is s*****t@c******r.com and I can't log into my account."
+  },
+  {
+    "chat_id": "C72875",
+    "timestamp": "2025-10-28T06:45:07.277933",
+    "message": "My phone number is ***********1779, please contact me about the refund."
+  }
+]
+
+Diff Summary:
+  - Redaction Count: 4
+  - Fields Affected: message
+  - Rules Triggered: PHONE_REGEX, LUHN_PAN, EMAIL_REGEX
+PASSED
+test_suite/test_api_endpoints.py::TestPolicyEndpoints::test_get_policy FAILED
+test_suite/test_api_endpoints.py::TestPolicyEndpoints::test_reload_policy  
+=== Policy Reload ===
+Status: success
+Message: None
+Version: 1.4
+Rules Loaded: None
+FAILED
+test_suite/test_api_endpoints.py::TestCacheEndpoints::test_get_cache_stats FAILED
+test_suite/test_api_endpoints.py::TestCacheEndpoints::test_clear_cache FAILED
+test_suite/test_api_endpoints.py::TestErrorHandling::test_invalid_endpoint 
+=== Invalid Endpoint ===
+✓ Correctly returns 404 for non-existent endpoint
+PASSED
+test_suite/test_api_endpoints.py::TestErrorHandling::test_invalid_api_key  
+=== Invalid API Key ===
+✓ Correctly rejects invalid API key
+PASSED
+test_suite/test_api_endpoints.py::TestErrorHandling::test_malformed_json   
+=== Malformed Request ===
+✓ Correctly validates request body
+PASSED
+test_suite/test_api_endpoints.py::TestPerformance::test_redaction_latency  
+=== Performance Test ===
+Total Request Time: 2037.83ms
+Processing Time (reported): 2.01ms
+Network Overhead: 2035.82ms
+FAILED
+test_suite/test_api_endpoints.py::TestPerformance::test_multiple_requests  
+=== Multiple Requests Test ===
+Request 1: 2046.35ms
+Request 2: 2029.15ms
+Request 3: 2055.57ms
+Request 4: 2055.13ms
+Request 5: 2054.14ms
+
+Average Time: 2048.07ms
+FAILED
+
+================================ FAILURES ================================ 
+_________________ TestHealthEndpoints.test_root_endpoint _________________ 
+
+self = <test_suite.test_api_endpoints.TestHealthEndpoints object at 0x0000023C15C9F350>
+
+    def test_root_endpoint(self):
+        """Test GET / - Root endpoint returns service info."""
+        response = requests.get(f"{BASE_URL}/")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        print("\n=== Root Endpoint ===")
+        print(f"Response: {json.dumps(data, indent=2)}")
+
+>       assert "name" in data
+E       AssertionError: assert 'name' in {'environment': 'development', 'service': 'PII/PCI Data Redaction Gateway', 'status': 'operational', 'version': '1.0.0'}
+
+test_suite\test_api_endpoints.py:39: AssertionError
+__________________ TestMetricsEndpoint.test_get_metrics __________________ 
+
+self = <test_suite.test_api_endpoints.TestMetricsEndpoint object at 0x0000023C166B0190>
+
+    def test_get_metrics(self):
+        """Test GET /metrics - Retrieve service metrics."""
+        response = requests.get(f"{BASE_URL}/metrics", headers=HEADERS)    
+
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500]>.status_code
+
+test_suite\test_api_endpoints.py:71: AssertionError
+_____________ TestMetricsEndpoint.test_metrics_requires_auth _____________ 
+
+self = <test_suite.test_api_endpoints.TestMetricsEndpoint object at 0x0000023C166B0790>
+
+    def test_metrics_requires_auth(self):
+        """Test that /metrics requires API key."""
+        response = requests.get(f"{BASE_URL}/metrics")
+
+>       assert response.status_code == 403
+E       assert 401 == 403
+E        +  where 401 = <Response [401]>.status_code
+
+test_suite\test_api_endpoints.py:92: AssertionError
+____________ TestRedactionEndpoint.test_redact_requires_auth _____________ 
+
+self = <test_suite.test_api_endpoints.TestRedactionEndpoint object at 0x0000023C166B2950>
+
+    def test_redact_requires_auth(self):
+        """Test that /redact requires API key."""
+        test_data = {"email": "test@example.com"}
+
+        response = requests.post(
+            f"{BASE_URL}/redact",
+            json={"data": test_data}
+        )
+
+>       assert response.status_code == 403
+E       assert 401 == 403
+E        +  where 401 = <Response [401]>.status_code
+
+test_suite\test_api_endpoints.py:261: AssertionError
+__________________ TestPolicyEndpoints.test_get_policy ___________________ 
+
+self = <test_suite.test_api_endpoints.TestPolicyEndpoints object at 0x0000023C166B3CD0>
+
+    def test_get_policy(self):
+        """Test GET /policy - Retrieve current policy."""
+        response = requests.get(f"{BASE_URL}/policy", headers=HEADERS)     
+
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404]>.status_code
+
+test_suite\test_api_endpoints.py:312: AssertionError
+_________________ TestPolicyEndpoints.test_reload_policy _________________ 
+
+self = <test_suite.test_api_endpoints.TestPolicyEndpoints object at 0x0000023C16710310>
+
+    def test_reload_policy(self):
+        """Test POST /policy/reload - Reload policy from file."""
+        response = requests.post(f"{BASE_URL}/policy/reload", headers=HEADERS)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        print("\n=== Policy Reload ===")
+        print(f"Status: {data.get('status')}")
+        print(f"Message: {data.get('message')}")
+        print(f"Version: {data.get('version')}")
+        print(f"Rules Loaded: {data.get('rules_loaded')}")
+
+        assert data["status"] == "success"
+        assert "version" in data
+>       assert "rules_loaded" in data
+E       AssertionError: assert 'rules_loaded' in {'reloaded_at': '2025-11-08T12:55:52.471876', 'rule_count': 8, 'status': 'success', 'version': '1.4'}
+
+test_suite\test_api_endpoints.py:343: AssertionError
+________________ TestCacheEndpoints.test_get_cache_stats _________________ 
+
+self = <test_suite.test_api_endpoints.TestCacheEndpoints object at 0x0000023C16710D10>
+
+    def test_get_cache_stats(self):
+        """Test GET /cache/stats - Get cache statistics."""
+        response = requests.get(f"{BASE_URL}/cache/stats", headers=HEADERS)
+
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404]>.status_code
+
+test_suite\test_api_endpoints.py:353: AssertionError
+__________________ TestCacheEndpoints.test_clear_cache ___________________ 
+
+self = <test_suite.test_api_endpoints.TestCacheEndpoints object at 0x0000023C16711310>
+
+    def test_clear_cache(self):
+        """Test POST /cache/clear - Clear cache."""
+        response = requests.post(f"{BASE_URL}/cache/clear", headers=HEADERS)
+
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404]>.status_code
+
+test_suite\test_api_endpoints.py:370: AssertionError
+_________________ TestPerformance.test_redaction_latency _________________ 
+
+self = <test_suite.test_api_endpoints.TestPerformance object at 0x0000023C167121D0>
+
+    def test_redaction_latency(self):
+        """Test that redaction completes within acceptable time."""        
+        test_file = TEST_DATA_DIR / "test_transaction.json"
+
+        with open(test_file, 'r') as f:
+            test_data = json.load(f)
+
+        request_body = {
+            "data": test_data,
+            "include_meta": True
+        }
+
+        start_time = time.time()
+
+        response = requests.post(
+            f"{BASE_URL}/redact",
+            headers=HEADERS,
+            json=request_body
+        )
+
+        end_time = time.time()
+        total_time = (end_time - start_time) * 1000
+
+        assert response.status_code == 200
+        data = response.json()
+
+        print("\n=== Performance Test ===")
+        print(f"Total Request Time: {total_time:.2f}ms")
+        print(f"Processing Time (reported): {data['processing_time_ms']:.2f}ms")
+        print(f"Network Overhead: {(total_time - data['processing_time_ms']):.2f}ms")
+
+        # Should complete within 200ms for typical requests (excluding LLM judge)
+>       assert total_time < 1000, f"Request took too long: {total_time:.2f}ms"
+E       AssertionError: Request took too long: 2037.83ms
+E       assert 2037.8308296203613 < 1000
+
+test_suite\test_api_endpoints.py:458: AssertionError
+_________________ TestPerformance.test_multiple_requests _________________
+
+self = <test_suite.test_api_endpoints.TestPerformance object at 0x0000023C16712510>
+
+    def test_multiple_requests(self):
+        """Test handling multiple sequential requests."""
+        test_file = TEST_DATA_DIR / "test_chat.json"
+
+        with open(test_file, 'r') as f:
+            test_data = json.load(f)
+
+        request_body = {
+            "data": test_data,
+            "include_meta": True
+        }
+
+        print("\n=== Multiple Requests Test ===")
+
+        times = []
+        for i in range(5):
+            start = time.time()
+            response = requests.post(
+                f"{BASE_URL}/redact",
+                headers=HEADERS,
+                json=request_body
+            )
+            end = time.time()
+
+            assert response.status_code == 200
+            times.append((end - start) * 1000)
+            print(f"Request {i+1}: {times[-1]:.2f}ms")
+
+        avg_time = sum(times) / len(times)
+        print(f"\nAverage Time: {avg_time:.2f}ms")
+
+>       assert all(t < 1000 for t in times), "One or more requests took too long"
+E       AssertionError: One or more requests took too long
+E       assert False
+E        +  where False = all(<generator object TestPerformance.test_multiple_requests.<locals>.<genexpr> at 0x0000023C16719490>)
+
+test_suite\test_api_endpoints.py:491: AssertionError
+======================== short test summary info ========================= 
+FAILED test_suite/test_api_endpoints.py::TestHealthEndpoints::test_root_endpoint - AssertionError: assert 'name' in {'environment': 'development', 'servi...
+FAILED test_suite/test_api_endpoints.py::TestMetricsEndpoint::test_get_metrics - assert 500 == 200
+FAILED test_suite/test_api_endpoints.py::TestMetricsEndpoint::test_metrics_requires_auth - assert 401 == 403
+FAILED test_suite/test_api_endpoints.py::TestRedactionEndpoint::test_redact_requires_auth - assert 401 == 403
+FAILED test_suite/test_api_endpoints.py::TestPolicyEndpoints::test_get_policy - assert 404 == 200
+FAILED test_suite/test_api_endpoints.py::TestPolicyEndpoints::test_reload_policy - AssertionError: assert 'rules_loaded' in {'reloaded_at': '2025-11-08T1...
+FAILED test_suite/test_api_endpoints.py::TestCacheEndpoints::test_get_cache_stats - assert 404 == 200
+FAILED test_suite/test_api_endpoints.py::TestCacheEndpoints::test_clear_cache - assert 404 == 200
+FAILED test_suite/test_api_endpoints.py::TestPerformance::test_redaction_latency - AssertionError: Request took too long: 2037.83ms
+FAILED test_suite/test_api_endpoints.py::TestPerformance::test_multiple_requests - AssertionError: One or more requests took too long
+===================== 10 failed, 9 passed in 47.58s ====================== 

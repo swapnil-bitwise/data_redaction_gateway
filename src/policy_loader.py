@@ -194,6 +194,18 @@ class PolicyLoader:
             'ttl': self.cache.ttl
         }
     
+    def clear_cache(self) -> int:
+        """
+        Clear all cached decisions.
+        
+        Returns:
+            Number of entries cleared
+        """
+        initial_size = len(self.cache)
+        self.cache.clear()
+        logger.info(f"Cache cleared: {initial_size} entries removed")
+        return initial_size
+    
     def get_policy_version(self) -> str:
         """
         Get current policy version.

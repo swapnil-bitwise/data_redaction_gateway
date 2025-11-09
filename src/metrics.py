@@ -137,6 +137,19 @@ class MetricsCollector:
         """
         return time.time() - self.start_time
     
+    @property
+    def judge_fallback_rate(self) -> float:
+        """
+        Get LLM judge fallback rate.
+        
+        Returns:
+            Fallback rate as percentage (0-100)
+        """
+        if self.judge_calls == 0:
+            return 0.0
+        
+        return (self.judge_fallbacks / self.judge_calls) * 100
+    
     def get_summary(self) -> dict:
         """
         Get metrics summary.

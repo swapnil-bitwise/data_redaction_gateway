@@ -401,6 +401,65 @@ async def validate_policy(api_key: str = Depends(verify_api_key)):
     return validation
 
 
+@app.get("/policy", tags=["Policy"])
+async def get_policy(api_key: str = Depends(verify_api_key)):
+    """Get complete policy configuration including all rules."""
+    policy_loader = get_policy_loader()
+    rules = policy_loader.get_rules()
+    
+    # Format rules for response
+    formatted_rules = []
+    for rule in rules:
+        rule_dict = {
+            'id': rule.id,
+            'action': rule.action.value if hasattr(rule.action, 'value') else str(rule.action),
+            'severity': rule.severity.value if hasattr(rule.severity, 'value') else str(rule.severity),
+            'enabled': rule.enabled,
+            'tags': rule.tags
+        }
+        # Add optional fields if present
+        if rule.pattern:
+            rule_dict['pattern'] = rule.pattern
+        if rule.engine:
+            rule_dict['engine'] = rule.engine
+        if rule.model:
+            rule_dict['model'] = rule.model
+        if rule.metadata:
+            rule_dict['metadata'] = rule.metadata
+        
+        formatted_rules.append(rule_dict)
+    
+    return {
+        'version': policy_loader.get_policy_version(),
+        'rule_count': len(rules),
+        'rules': formatted_rules,
+        'loaded_at': app_state['start_time'].isoformat()
+    }
+
+
+@app.get("/cache/stats", tags=["Cache"])
+async def get_cache_stats(api_key: str = Depends(verify_api_key)):
+    """Get cache statistics."""
+    policy_loader = get_policy_loader()
+    cache_stats = policy_loader.get_cache_stats()
+    
+    return cache_stats
+
+
+@app.post("/cache/clear", tags=["Cache"])
+async def clear_cache(api_key: str = Depends(verify_api_key)):
+    """Clear the entire cache."""
+    policy_loader = get_policy_loader()
+    cleared_count = policy_loader.clear_cache()
+    
+    return {
+        'status': 'success',
+        'message': f'Cache cleared. Removed {cleared_count} entries.',
+        'cleared_entries': cleared_count,
+        'cleared_at': datetime.utcnow().isoformat()
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
