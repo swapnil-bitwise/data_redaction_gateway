@@ -1,6 +1,6 @@
 # 🛡️ Runtime PII/PCI Data Redaction Gateway
 
-**Team:** [Your Team Name]  
+**Team:** AI NINJAS  
 **Hackathon Submission:** Real-Time Data Redaction Gateway
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
